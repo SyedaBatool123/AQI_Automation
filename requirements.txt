@@ -1,0 +1,16 @@
+hopsworks
+pandas
+numpy
+scikit-learn
+joblib
+requests
+streamlit
+imbalanced-learn
+xgboost
+lightgbm
+tensorflow
+matplotlib
+shap
+fastapi
+gradio
+uvicorn
