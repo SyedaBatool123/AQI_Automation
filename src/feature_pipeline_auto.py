@@ -5,19 +5,14 @@ import requests
 import hopsworks
 from datetime import datetime
 
-print("🚀 Starting Automated Feature Pipeline...")
+print(" Starting Automated Feature Pipeline...")
 
-# ---------------------------
-# 1️⃣ Connect to Hopsworks
-# ---------------------------
 project = hopsworks.login(api_key_value=os.getenv("HOPSWORKS_API_KEY"))
 fs = project.get_feature_store()
 
-# ---------------------------
-# 2️⃣ Fetch Real-Time Data
-# ---------------------------
+# Fetch Real-Time Data
 def fetch_openmeteo_data():
-    print("📡 Fetching Air Quality and Weather Data...")
+    print(" Fetching Air Quality and Weather Data...")
 
     aq_url = (
         "https://air-quality-api.open-meteo.com/v1/air-quality?"
@@ -46,13 +41,10 @@ def fetch_openmeteo_data():
     df_weather = pd.DataFrame(weather_data["hourly"])
 
     df = pd.merge(df_aq, df_weather, on="time", how="inner")
-    print(f"✅ Combined Data Shape: {df.shape}")
+    print(f" Combined Data Shape: {df.shape}")
     return df
 
-
-# ---------------------------
-# 3️⃣ AQI Calculation
-# ---------------------------
+# AQI Calculation
 epa_breakpoints = {
     "pm2_5": [{"C_low": 0, "C_high": 12, "I_low": 0, "I_high": 50},
               {"C_low": 12.1, "C_high": 35.4, "I_low": 51, "I_high": 100}],
@@ -74,9 +66,6 @@ def calc_aqi(concentration, pollutant_bp):
     return np.nan
 
 
-# ---------------------------
-# 4️⃣ Process Data
-# ---------------------------
 df = fetch_openmeteo_data()
 df["time"] = pd.to_datetime(df["time"])
 
@@ -98,23 +87,18 @@ for pollutant in pollutants:
 
 df["aqi"] = df[[f"aqi_{p}" for p in pollutants]].max(axis=1)
 
-# ✅ Replace dropna with fillna
+# Replace dropna with fillna
 df = df.fillna(method='ffill').fillna(method='bfill')
 df = df.reset_index(drop=True)
 
-print(f"✅ Processed Data Ready: {df.shape}")
+print(f" Processed Data Ready: {df.shape}")
 print(df.head(2).T)
 
-# ---------------------------
-# 5️⃣ Insert into Feature Group
-# ---------------------------
-# ---------------------------
-# 5️⃣ Insert into Feature Group
-# ---------------------------
-
+# Insert into Feature Group
+df["is_weekend"] = df["is_weekend"].astype(int)
 df["id"] = df.index.astype(str)
 
-# ✅ Ensure correct data types for AQI columns
+#  Ensure correct data types for AQI columns
 if "aqi_pm2_5" in df.columns:
     df["aqi_pm2_5"] = df["aqi_pm2_5"].fillna(0).astype("int64")
 if "aqi_ozone" in df.columns:
@@ -123,12 +107,12 @@ if "aqi_ozone" in df.columns:
 try:
     fg = fs.get_feature_group("air_quality_processed", version=2)
     fg.insert(df, write_options={"wait_for_job": False})
-    print("✅ Data successfully inserted into existing Feature Group (version 2).")
+    print(" Data successfully inserted into existing Feature Group (version 2).")
 except Exception as e:
-    print(f"⚠️ Error inserting data: {e}")
-    print("🔄 Trying to recreate Feature Group...")
+    print(f" Error inserting data: {e}")
+    print(" Trying to recreate Feature Group...")
 
-    # 💡 Only recreate if it truly doesn’t exist
+    #  Only recreate if it truly doesn’t exist
     try:
         fg = fs.create_feature_group(
             name="air_quality_processed",
@@ -138,8 +122,8 @@ except Exception as e:
             online_enabled=True
         )
         fg.insert(df, write_options={"wait_for_job": False})
-        print("✅ Feature group recreated & data inserted successfully.")
+        print(" Feature group recreated & data inserted successfully.")
     except Exception as e2:
-        print(f"❌ Still failed to insert or recreate: {e2}")
+        print(f" Still failed to insert or recreate: {e2}")
 
-print("🏁 Automated Feature Pipeline completed successfully!")
+print(" Automated Feature Pipeline completed successfully!")
