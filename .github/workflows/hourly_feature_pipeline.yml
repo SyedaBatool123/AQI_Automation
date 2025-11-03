@@ -2,7 +2,7 @@ name: Hourly Feature Pipeline
 
 on:
   schedule:
-    - cron: '0 * * * *'   # Runs every hour
+    - cron: '0 * * * *'   
   workflow_dispatch:       
 
 jobs:
@@ -22,8 +22,8 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Run feature pipeline
+      - name: Run Automated Feature Pipeline
         env:
           HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
         run: |
-          python src/feature_engineering.py
+          python src/feature_pipeline_auto.py
